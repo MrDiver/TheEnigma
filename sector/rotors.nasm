@@ -51,17 +51,21 @@ FUNC Rotor_get
 
 ; AX = Position, BX = Table Address -> AL = Next Position
 Rotor_forward:
+  PRESERVE BX
   xlat
+  RESTORE BX
   ret
 
 ; AX = Position, BX = Table Address -> AX = Next Position
 Rotor_backward:
+  PRESERVE BX, SI
   mov SI, 26
   .scan:
     dec SI
     cmp [BX+SI],AL                      ; FWD[CX] == AL
     jnz .scan
   mov AX, SI
+  RESTORE BX, SI
   ret
 
 ; BX = Rotor Adress
@@ -101,5 +105,5 @@ Rotor_step_all:
     jz .again
 
   RESTORE BX,CX
-  ret 
+  ret
 

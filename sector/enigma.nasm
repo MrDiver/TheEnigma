@@ -1,15 +1,25 @@
 %include "macros.nasm"
 [org 0x7c00]
 
-; Stack 0x10000 - 0x1FFFF
-mov ax, 0x1000
+cli
+cld
+xor ax, ax
+mov ds, ax
+mov es, ax
 mov ss, ax
-mov sp, 0xFFFF
+
+; Load SP immediately after SS while interrupts are masked.
+mov sp, 0x9000
 mov bp, sp
+sti
 
 ; Go to Graphics Mode 80x25 Color
 mov ah, 0x00
-mov al, 3                               ; Mode
+mov al, 0                               ; Mode
+int 0x10
+
+mov AH, 0x0E
+mov AL, '>'
 int 0x10
 
 mainfunc:
@@ -35,7 +45,7 @@ mainfunc:
     ARGS AX
     call enigma
     call print_pos
-    call play_char
+    ; call play_char
     jmp .inloop
 
   .space:
@@ -47,7 +57,7 @@ mainfunc:
     jmp $
 
 FUNC enigma
-  ;PRESERVE BX, CX
+  PRESERVE BX, CX, DX
   call Rotor_step_all
 ; INPUT HERE
   ARG AX, 0
@@ -83,7 +93,7 @@ FUNC enigma
     cmp BX, ROTORS + 4
     jbe .backwardloop
 
-  ;RESTORE BX, CX
+  RESTORE BX, CX, DX
   RETURN 1
 
 print_pos:
@@ -94,14 +104,38 @@ print_pos:
   pop ax
   ret
 
-%include "rotors_gen.nasm"
-%include "rotors.nasm"
-%warning Enigma is %eval($-$$) bytes
-%include "speaker.nasm"
-%include "timer.nasm"
-%include "beep.nasm"
-; %include "generic.nasm"
-%warning Size is %eval($-$$) bytes
+ %include "rotors_gen.nasm"
+ %include "rotors.nasm"
+ %warning Enigma is %eval($-$$) bytes
+ ; %include "speaker.nasm"
+ ; %include "timer.nasm"
+ ; %include "beep.nasm"
+ ; %include "generic.nasm"
+ %warning Size is %eval($-$$) bytes
+
+jmp $
+
+USB_IMAGE_BYTES equ 1440 * 1024
+USB_IMAGE_SECTORS equ USB_IMAGE_BYTES / 512
+USB_PARTITION_LBA equ 1
+USB_PARTITION_SECTORS equ USB_IMAGE_SECTORS - USB_PARTITION_LBA
+
+; MBR partition table starts at byte 446.
+times 446-($-$$) db 0x0
+
+; Active partition entry for BIOSes that validate USB-HDD media.
+db 0x80
+db 0x00, 0x02, 0x00
+db 0x0c
+db 0xfe, 0xff, 0xff
+dd USB_PARTITION_LBA
+dd USB_PARTITION_SECTORS
 
 times 510-($-$$) db 0x0
 dw 0xaa55
+
+;
+;              END OF 512 BYTE SECTOR
+;
+
+times USB_IMAGE_BYTES-($-$$) db 0x0
