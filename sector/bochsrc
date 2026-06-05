@@ -1,0 +1,8 @@
+floppya: 1_44=enigma.bin, status=inserted
+boot: floppy
+cpu: count=1 model=i386
+
+sound: driver=sdl
+speaker: enabled=1, mode=sound
+sb16: enabled=0
+es1370: enabled=0
